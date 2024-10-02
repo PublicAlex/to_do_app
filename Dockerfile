@@ -1,7 +1,10 @@
-# Usar una imagen base de PHP
-FROM php:8.1-fpm
+# Utiliza la imagen de PHP 8.2 con FPM
+FROM php:8.2-fpm
 
-# Instalar extensiones de PHP
+# Establece el directorio de trabajo
+WORKDIR /var/www
+
+# Instala las dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -9,34 +12,29 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     unzip \
     git \
-    libonig-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd zip pdo pdo_mysql
+    && docker-php-ext-install gd zip
 
-# Instalar Composer
+# Instala las extensiones de PHP requeridas
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Instala Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Configurar el directorio de trabajo
-WORKDIR /var/www
+# Copia el archivo de configuración de Composer
+COPY composer.json composer.lock ./
 
-# Copiar los archivos de tu aplicación Laravel
-COPY . .
-
-# Instalar dependencias de Laravel
+# Instala las dependencias de Composer
 RUN composer install --no-interaction --optimize-autoloader --no-dev
 
-# Instalar Node.js y npm
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - \
-    && apt-get install -y nodejs
+# Copia el resto de la aplicación
+COPY . .
 
-# Instalar dependencias de Vue.js
-RUN npm install
+# Copia el archivo .env
+COPY .env.example .env
 
-# Compilar los activos de Vue.js
-RUN npm run build
+# Genera la clave de la aplicación (opcional)
+RUN php artisan key:generate
 
-# Exponer el puerto 9000 para PHP-FPM
-EXPOSE 9000
-
-# Comando para iniciar PHP-FPM
+# Establece el comando para iniciar PHP-FPM
 CMD ["php-fpm"]
