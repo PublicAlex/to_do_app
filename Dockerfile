@@ -21,14 +21,14 @@ RUN docker-php-ext-install pdo pdo_mysql
 # Instala Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Copia el resto de la aplicación primero
+COPY . .
+
 # Copia el archivo de configuración de Composer
 COPY composer.json composer.lock ./
 
 # Instala las dependencias de Composer
 RUN composer install --no-interaction --optimize-autoloader --no-dev
-
-# Copia el resto de la aplicación
-COPY . .
 
 # Copia el archivo .env
 COPY .env.example .env
