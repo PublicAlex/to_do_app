@@ -1,54 +1,43 @@
-# Imagen base para PHP y Composer
+# Set the base image for subsequent instructions
 FROM php:8.2-fpm
 
-# Instalar dependencias necesarias para Laravel
+# Install dependencies
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
+    build-essential \
     libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
     libonig-dev \
-    libzip-dev \
+    libxml2-dev \
     zip \
+    curl \
     unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql mbstring gd zip
+    git \
+    libzip-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev && \
+    docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# Instalar Composer
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Establecer el directorio de trabajo
+# Set working directory
 WORKDIR /var/www
 
-# Copiar archivos del backend
-COPY . .
+# Remove default server definition
+RUN rm -rf /var/www/html
 
-# Instalar dependencias de Laravel
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+# Copy existing application directory contents
+COPY . /var/www
 
-# Copiar y configurar el archivo .env
-COPY .env.example .env
-RUN php artisan key:generate
+# Copy existing application directory permissions
+COPY --chown=www-data:www-data . /var/www
 
-# Dar permisos al almacenamiento y cache de Laravel
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage
+# Change current user to www
+USER www-data
 
-# Instalar Node.js y npm
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
-
-# Instalar dependencias del frontend y compilar los assets
-RUN npm install && npm run build
-
-# Exponer el puerto 9000 y correr PHP-FPM
+# Expose port 9000 and start php-fpm server
 EXPOSE 9000
 CMD ["php-fpm"]
-
-# Imagen para Nginx
-FROM nginx:latest
-COPY --from=0 /var/www /var/www
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
