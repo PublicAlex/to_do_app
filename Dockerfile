@@ -49,7 +49,6 @@ CMD ["php-fpm"]
 # Imagen para Nginx
 FROM nginx:latest
 COPY --from=0 /var/www /var/www
-COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
